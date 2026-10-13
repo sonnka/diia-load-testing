@@ -1,0 +1,32 @@
+[versions]
+java = "21"
+kotlin = "2.3.20"
+kotlinx-coroutines = "1.10.2"
+kotlinx-serialization = "1.11.0"
+hdrhistogram = "2.2.2"
+grpc = "1.75.0"
+grpc-kotlin = "1.5.0"
+protobuf = "4.34.0"
+spotless = "8.4.0"
+ktlint = "1.8.0"
+junit = "5.12.2"
+
+[libraries]
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+hdrhistogram = { module = "org.hdrhistogram:HdrHistogram", version.ref = "hdrhistogram" }
+grpc-bom = { module = "io.grpc:grpc-bom", version.ref = "grpc" }
+grpc-api = { module = "io.grpc:grpc-api" }
+grpc-stub = { module = "io.grpc:grpc-stub" }
+grpc-netty-shaded = { module = "io.grpc:grpc-netty-shaded" }
+grpc-inprocess = { module = "io.grpc:grpc-inprocess" }
+grpc-services = { module = "io.grpc:grpc-services" }
+grpc-kotlin-stub = { module = "io.grpc:grpc-kotlin-stub", version.ref = "grpc-kotlin" }
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

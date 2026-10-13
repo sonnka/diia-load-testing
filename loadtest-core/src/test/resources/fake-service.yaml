@@ -1,0 +1,3 @@
+# A load test's settings for the service it starts (src/loadTest/resources)
+from:
+  file: yes
