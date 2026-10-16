@@ -4,4 +4,4 @@ plugins {
 
 rootProject.name = "diia-load-testing"
 
-include(":loadtest-core", ":loadtest-grpc", ":loadtest-gradle-plugin")
+include(":loadtest-core", ":loadtest-grpc", ":loadtest-http", ":loadtest-gradle-plugin")

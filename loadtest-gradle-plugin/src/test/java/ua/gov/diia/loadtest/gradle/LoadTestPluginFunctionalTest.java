@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -70,6 +71,27 @@ class LoadTestPluginFunctionalTest {
   }
 
   @Test
+  void addsTheLibraryOfEveryTransport() throws IOException {
+    consumer("loadTest { mainClass = 'demo.loadtest.Main'; transports = ['http'] }");
+    final String version = LoadTestPlugin.pluginVersion();
+
+    final BuildResult http = gradle("printLoadTestDependencies").build();
+    write("build.gradle", read("build.gradle")
+            .replace("transports = ['http']", "transports = ['grpc', 'http']"));
+
+    final BuildResult both = gradle("printLoadTestDependencies").build();
+    write("build.gradle", read("build.gradle")
+            .replace("transports = ['grpc', 'http']", "transports = ['soap']"));
+
+    final BuildResult unknown = gradle("printLoadTestDependencies").buildAndFail();
+
+    assertTrue(http.getOutput().contains("deps=[ua.gov.diia:loadtest-http:" + version + "]"), http.getOutput());
+    assertTrue(both.getOutput().contains("deps=[ua.gov.diia:loadtest-grpc:" + version + ", ua.gov.diia:loadtest-http:" + version + "]"),
+            both.getOutput());
+    assertTrue(unknown.getOutput().contains("Unknown load test transport 'soap'"), unknown.getOutput());
+  }
+
+  @Test
   void explainsAMissingDefinition() throws IOException {
     consumer("");
 
@@ -82,15 +104,17 @@ class LoadTestPluginFunctionalTest {
 
   private void consumer(final String loadTestBlock) throws IOException {
     final String version = LoadTestPlugin.pluginVersion();
-    write("repo/ua/gov/diia/loadtest-grpc/" + version + "/loadtest-grpc-" + version + ".pom", """
-            <project xmlns="http://maven.apache.org/POM/4.0.0">
-              <modelVersion>4.0.0</modelVersion>
-              <groupId>ua.gov.diia</groupId>
-              <artifactId>loadtest-grpc</artifactId>
-              <version>%s</version>
-              <packaging>pom</packaging>
-            </project>
-            """.formatted(version));
+    for (final String library : List.of("loadtest-grpc", "loadtest-http")) {
+      write("repo/ua/gov/diia/" + library + "/" + version + "/" + library + "-" + version + ".pom", """
+              <project xmlns="http://maven.apache.org/POM/4.0.0">
+                <modelVersion>4.0.0</modelVersion>
+                <groupId>ua.gov.diia</groupId>
+                <artifactId>%s</artifactId>
+                <version>%s</version>
+                <packaging>pom</packaging>
+              </project>
+              """.formatted(library, version));
+    }
     write("settings.gradle", "rootProject.name = 'consumer'");
     write("build.gradle", """
             plugins {
@@ -110,6 +134,10 @@ class LoadTestPluginFunctionalTest {
 
   private GradleRunner gradle(final String... arguments) {
     return GradleRunner.create().withProjectDir(project.toFile()).withPluginClasspath().withArguments(arguments);
+  }
+
+  private String read(final String path) throws IOException {
+    return Files.readString(project.resolve(path));
   }
 
   private void write(final String path, final String content) throws IOException {

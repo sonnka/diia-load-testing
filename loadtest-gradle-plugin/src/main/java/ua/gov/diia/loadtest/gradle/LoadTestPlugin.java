@@ -22,6 +22,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -31,7 +32,8 @@ import java.util.Properties;
  * <ul>
  *   <li>a {@code loadTest} source set ({@code src/loadTest/java} or {@code src/loadTest/kotlin}) that
  *       sees main's classes - the generated gRPC stubs - and main's dependencies;</li>
- *   <li>{@code ua.gov.diia:loadtest-grpc} at this plugin's own version on that source set;</li>
+ *   <li>the library of every {@code loadTest.transports} entry ({@code ua.gov.diia:loadtest-grpc} by default,
+ *       {@code ua.gov.diia:loadtest-http} for {@code http}) at this plugin's own version on that source set;</li>
  *   <li>{@code runLoadTest}: runs {@code loadTest.definition} (or {@code loadTest.mainClass}) and forwards
  *       every {@code -D} given on the Gradle command line to it;</li>
  *   <li>{@code loadTestHelp}: prints the definition's scenarios, presets and parameters;</li>
@@ -48,7 +50,11 @@ public final class LoadTestPlugin implements Plugin<Project> {
   public static final String SOURCE_SET_NAME = "loadTest";
   public static final String TASK_NAME = "runLoadTest";
   public static final String HELP_TASK_NAME = "loadTestHelp";
-  public static final String LIBRARY = "ua.gov.diia:loadtest-grpc";
+  public static final Map<String, String> LIBRARIES = Map.of(
+          "grpc", "ua.gov.diia:loadtest-grpc",
+          "http", "ua.gov.diia:loadtest-http"
+  );
+  public static final String DEFAULT_TRANSPORT = "grpc";
   /** The library's runner for definitions. */
   public static final String RUNNER = "ua.gov.diia.loadtest.LoadTestMain";
 
@@ -59,6 +65,7 @@ public final class LoadTestPlugin implements Plugin<Project> {
   @Override
   public void apply(final Project project) {
     final LoadTestExtension extension = project.getExtensions().create(EXTENSION_NAME, LoadTestExtension.class);
+    extension.getTransports().convention(List.of(DEFAULT_TRANSPORT));
     project.getPlugins().withType(JavaPlugin.class, javaPlugin -> configure(project, extension));
   }
 
@@ -74,7 +81,11 @@ public final class LoadTestPlugin implements Plugin<Project> {
             .extendsFrom(configurations.getByName(main.getRuntimeOnlyConfigurationName()));
 
     project.getDependencies().add(loadTest.getImplementationConfigurationName(), main.getOutput());
-    project.getDependencies().add(loadTest.getImplementationConfigurationName(), LIBRARY + ":" + pluginVersion());
+    configurations.getByName(loadTest.getImplementationConfigurationName()).getDependencies().addAllLater(
+            extension.getTransports().map(transports -> transports.stream()
+                    .distinct()
+                    .map(transport -> project.getDependencies().create(library(transport) + ":" + pluginVersion()))
+                    .toList()));
 
     final Provider<RegularFile> serviceClasspathFile =
             project.getLayout().getBuildDirectory().file("loadtest/service-classpath.txt");
@@ -138,6 +149,15 @@ public final class LoadTestPlugin implements Plugin<Project> {
     task.setGroup(LifecycleBasePlugin.VERIFICATION_GROUP);
     task.setClasspath(loadTest.getRuntimeClasspath());
     task.systemProperties(project.getGradle().getStartParameter().getSystemPropertiesArgs());
+  }
+
+  private static String library(final String transport) {
+    final String library = LIBRARIES.get(transport);
+    if (library == null) {
+      throw new GradleException("Unknown load test transport '" + transport + "' in loadTest { transports = ... }; available: "
+              + String.join(", ", LIBRARIES.keySet().stream().sorted().toList()));
+    }
+    return library;
   }
 
   private static List<String> optional(final String value) {

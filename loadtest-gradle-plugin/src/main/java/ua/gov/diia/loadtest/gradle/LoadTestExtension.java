@@ -1,5 +1,6 @@
 package ua.gov.diia.loadtest.gradle;
 
+import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 
 /** The {@code loadTest { }} block. Set {@code definition}; the rest is optional. */
@@ -30,5 +31,14 @@ public abstract class LoadTestExtension {
    * @return the service main class property
    */
   public abstract Property<String> getServiceMainClass();
+
+  /**
+   * What the load test talks to the service over; each one adds its library to the {@code loadTest} source
+   * set: {@code grpc} ({@code loadtest-grpc}, {@code GrpcLoadTestDefinition}) and {@code http}
+   * ({@code loadtest-http}, {@code HttpLoadTestDefinition}). Default: {@code ['grpc']}.
+   *
+   * @return the transports property
+   */
+  public abstract ListProperty<String> getTransports();
 
 }
